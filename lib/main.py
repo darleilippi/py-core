@@ -7,7 +7,6 @@ class PrintWrapper(io.StringIO):
     def __call__(self, *args, **kwargs):
         # Pass the object instance (self) as the file
         sys.stdout.write("Wrapper: " + str(args[0]) + '\n')
-        Application.class_function()
         return builtins.print(*args, file=self, **kwargs)
 
 
@@ -20,21 +19,22 @@ class WebSocketClient():
 
 
 class Application():
+    print_wrapper = None
+    websocket_client = None
 
-    print_wrapper = PrintWrapper()
-    websocket_client = WebSocketClient()
+    def __new__(cls):
+        if not hasattr(cls, 'instance'):
+            cls.instance = super(Application, cls).__new__(cls)
+            cls.websocket_client = WebSocketClient()
+            cls.print_wrapper = PrintWrapper()
 
-    def __init__(self) -> None:
-        pass
-
-    @classmethod
-    def class_function(cls):
-        sys.stdout.write(cls.websocket_client.send() + '\n')
-
-    def run(self, func):
-        func()
-
-        sys.stdout.write('\nOutput: \n' + self.print_wrapper.getvalue())
+        return cls.instance
 
 
-print = Application.print_wrapper
+def dec_app(func):
+    app = Application()
+
+    def closure(*args, **kwargs):
+        return func(app, *args, **kwargs)
+
+    return closure
